@@ -352,28 +352,16 @@ open class YoutubeDL: NSObject {
             popen.returncode = PythonObject(exitCode)
 
             func read(pipe: Pipe) -> String? {
-            	do {
-               		guard let data = try pipe.fileHandleForReading.readToEnd(),
-                          let string = String(data: data, encoding: .utf8) else {
-                 		print(#function, "not UTF-8?")
-                    	return nil
-                 	}
-
-					print("read popen")
-                  	print(#function, string)
-                  	return string
-             	} catch {
-              		print(#function, "error reading pipe")
-              		return nil
-              	}
+                guard let string = String(data: pipe.fileHandleForReading.availableDataWithTimeout(0.1), encoding: .utf8) else {
+//                    print(#function, "not UTF-8?")
+                    return nil
+                }
+//                print(#function, string)
+                return string
             }
 
-			print("1")
             result[0] = read(pipe: outPipe)
-            print("2")
             result[1] = read(pipe: errPipe)
-            print("3")
-
             return Python.tuple(result)
         }
         return Python.tuple(result)
@@ -1027,5 +1015,30 @@ public extension YtDlp.YoutubeDL {
     func download(urls: [URL]? = nil) throws {
         let urls = urls?.map(\.absoluteString).pythonObject ?? self.urls
         try ydl.download.throwing.dynamicallyCall(withArguments: urls)
+    }
+}
+
+extension FileHandle {
+    func availableDataWithTimeout(_ timeout: TimeInterval) -> Data? {
+        let semaphore = DispatchSemaphore(value: 0)
+        var result: Data?
+
+        DispatchQueue.global(qos: .default).async {
+            do {
+                result = try self.availableData
+            } catch {
+                print("Error reading data: \(error)")
+            }
+            semaphore.signal()
+        }
+
+        let timeoutResult = semaphore.wait(timeout: .now() + timeout)
+
+        if timeoutResult == .timedOut {
+            print("availableData timed out")
+            return nil
+        }
+
+        return result
     }
 }
