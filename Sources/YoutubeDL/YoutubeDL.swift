@@ -329,44 +329,66 @@ open class YoutubeDL: NSObject {
     }
 
     lazy var popenHandler = PythonFunction { args in
-        print(#function, args)
-        let popen = args[0]
-        var result = Array<String?>(repeating: nil, count: 2)
-        if var args: [String] = Array(args[1][0]) {
-            // save standard out/error
-            let stdout = dup(STDOUT_FILENO)
-            let stderr = dup(STDERR_FILENO)
+	    print(#function, args)
+	    let popen = args[0]
+	    var result = Array<String?>(repeating: nil, count: 2)
+	    if var args: [String] = Array(args[1][0]) {
+	        // save standard out/error
+	        let stdout = dup(STDOUT_FILENO)
+	        let stderr = dup(STDERR_FILENO)
+	        // redirect standard out/error
+	        let outPipe = Pipe()
+	        let errPipe = Pipe()
+	        dup2(outPipe.fileHandleForWriting.fileDescriptor, STDOUT_FILENO)
+	        dup2(errPipe.fileHandleForWriting.fileDescriptor, STDERR_FILENO)
 
-            // redirect standard out/error
-            let outPipe = Pipe()
-            let errPipe = Pipe()
-            dup2(outPipe.fileHandleForWriting.fileDescriptor, STDOUT_FILENO)
-            dup2(errPipe.fileHandleForWriting.fileDescriptor, STDERR_FILENO)
+	        // Create dispatch group to wait for async reads
+	        let group = DispatchGroup()
 
-            let exitCode = self.handleFFmpeg(args: args)
+	        // Async read from stdout
+	        group.enter()
+	        DispatchQueue.global().async {
+	            result[0] = self.readFullyFromPipe(outPipe)
+	            group.leave()
+	        }
 
-            // restore standard out/error
-            dup2(stdout, STDOUT_FILENO)
-            dup2(stderr, STDERR_FILENO)
+	        // Async read from stderr
+	        group.enter()
+	        DispatchQueue.global().async {
+	            result[1] = self.readFullyFromPipe(errPipe)
+	            group.leave()
+	        }
 
-            popen.returncode = PythonObject(exitCode)
+	        let exitCode = self.handleFFmpeg(args: args)
 
-            func read(pipe: Pipe) -> String? {
-                guard let string = String(data: pipe.fileHandleForReading.availableData, encoding: .utf8) else {
-//                    print(#function, "not UTF-8?")
-                    return nil
-                }
-//                print(#function, string)
-                return string
-            }
+	        // Close write ends of pipes
+	        outPipe.fileHandleForWriting.closeFile()
+	        errPipe.fileHandleForWriting.closeFile()
 
-            result[0] = read(pipe: outPipe)
-            print(#function, result[0])
-            result[1] = read(pipe: errPipe)
-            return Python.tuple(result)
-        }
-        return Python.tuple(result)
-    }
+	        // Wait for reads to complete
+	        group.wait()
+
+	        // restore standard out/error
+	        dup2(stdout, STDOUT_FILENO)
+	        dup2(stderr, STDERR_FILENO)
+	        popen.returncode = PythonObject(exitCode)
+
+	        return Python.tuple(result)
+	    }
+	    return Python.tuple(result)
+	}
+
+	func readFullyFromPipe(_ pipe: Pipe) -> String {
+	    var result = Data()
+	    while true {
+	        let data = pipe.fileHandleForReading.availableData
+	        if data.isEmpty {
+	            break
+	        }
+	        result.append(data)
+	    }
+	    return String(data: result, encoding: .utf8) ?? ""
+	}
 
     func handleFFmpeg(args: [String]) -> Int {
         var args = args
