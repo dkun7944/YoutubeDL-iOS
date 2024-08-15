@@ -353,8 +353,8 @@ open class YoutubeDL: NSObject {
 
             func read(pipe: Pipe) -> String? {
             	do {
-             		let data = try pipe.fileHandleForReading.readToEnd()
-               		guard let string = String(data: data, encoding: .utf8) else {
+               		guard let data = try pipe.fileHandleForReading.readToEnd(),
+                          let string = String(data: data, encoding: .utf8) else {
                  		print(#function, "not UTF-8?")
                     	return nil
                  	}
