@@ -328,45 +328,44 @@ open class YoutubeDL: NSObject {
         subprocess.Popen.handler = handler.pythonObject
     }
 
-	lazy var popenHandler = PythonFunction { args in
-	    print(#function, args)
-	    let popen = args[0]
-	    var result = Array<String?>(repeating: nil, count: 2)
-	    if var args: [String] = Array(args[1][0]) {
-	        // save standard out/error
-	        let stdout = dup(STDOUT_FILENO)
-	        let stderr = dup(STDERR_FILENO)
-	        // redirect standard out/error
-	        let outPipe = Pipe()
-	        let errPipe = Pipe()
-	        dup2(outPipe.fileHandleForWriting.fileDescriptor, STDOUT_FILENO)
-	        dup2(errPipe.fileHandleForWriting.fileDescriptor, STDERR_FILENO)
+    lazy var popenHandler = PythonFunction { args in
+        print(#function, args)
+        let popen = args[0]
+        var result = Array<String?>(repeating: nil, count: 2)
+        if var args: [String] = Array(args[1][0]) {
+            // save standard out/error
+            let stdout = dup(STDOUT_FILENO)
+            let stderr = dup(STDERR_FILENO)
 
-	        // Run the subprocess
-	        let exitCode = self.handleFFmpeg(args: args)
+            // redirect standard out/error
+            let outPipe = Pipe()
+            let errPipe = Pipe()
+            dup2(outPipe.fileHandleForWriting.fileDescriptor, STDOUT_FILENO)
+            dup2(errPipe.fileHandleForWriting.fileDescriptor, STDERR_FILENO)
 
-	        // Close write ends of pipes to signal EOF to readers
-	        outPipe.fileHandleForWriting.closeFile()
-	        errPipe.fileHandleForWriting.closeFile()
+            let exitCode = self.handleFFmpeg(args: args)
 
-	        // Read from pipes
-	        result[0] = self.readFullyFromPipe(outPipe)
-	        result[1] = self.readFullyFromPipe(errPipe)
+            // restore standard out/error
+            dup2(stdout, STDOUT_FILENO)
+            dup2(stderr, STDERR_FILENO)
 
-	        // restore standard out/error
-	        dup2(stdout, STDOUT_FILENO)
-	        dup2(stderr, STDERR_FILENO)
-	        popen.returncode = PythonObject(exitCode)
+            popen.returncode = PythonObject(exitCode)
 
-	        return Python.tuple(result)
-	    }
-	    return Python.tuple(result)
-	}
+            func read(pipe: Pipe) -> String? {
+                guard let string = String(data: pipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) else {
+//                    print(#function, "not UTF-8?")
+                    return nil
+                }
+//                print(#function, string)
+                return string
+            }
 
-	func readFullyFromPipe(_ pipe: Pipe) -> String {
-	    let data = pipe.fileHandleForReading.readDataToEndOfFile()
-	    return String(data: data, encoding: .utf8) ?? ""
-	}
+            result[0] = read(pipe: outPipe)
+            result[1] = read(pipe: errPipe)
+            return Python.tuple(result)
+        }
+        return Python.tuple(result)
+    }
 
     func handleFFmpeg(args: [String]) -> Int {
         var args = args
