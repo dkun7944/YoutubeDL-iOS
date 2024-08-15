@@ -328,7 +328,7 @@ open class YoutubeDL: NSObject {
         subprocess.Popen.handler = handler.pythonObject
     }
 
-    lazy var popenHandler = PythonFunction { args in
+	lazy var popenHandler = PythonFunction { args in
 	    print(#function, args)
 	    let popen = args[0]
 	    var result = Array<String?>(repeating: nil, count: 2)
@@ -342,31 +342,16 @@ open class YoutubeDL: NSObject {
 	        dup2(outPipe.fileHandleForWriting.fileDescriptor, STDOUT_FILENO)
 	        dup2(errPipe.fileHandleForWriting.fileDescriptor, STDERR_FILENO)
 
-	        // Create dispatch group to wait for async reads
-	        let group = DispatchGroup()
-
-	        // Async read from stdout
-	        group.enter()
-	        DispatchQueue.global().async {
-	            result[0] = self.readFullyFromPipe(outPipe)
-	            group.leave()
-	        }
-
-	        // Async read from stderr
-	        group.enter()
-	        DispatchQueue.global().async {
-	            result[1] = self.readFullyFromPipe(errPipe)
-	            group.leave()
-	        }
-
+	        // Run the subprocess
 	        let exitCode = self.handleFFmpeg(args: args)
 
-	        // Close write ends of pipes
+	        // Close write ends of pipes to signal EOF to readers
 	        outPipe.fileHandleForWriting.closeFile()
 	        errPipe.fileHandleForWriting.closeFile()
 
-	        // Wait for reads to complete
-	        group.wait()
+	        // Read from pipes
+	        result[0] = self.readFullyFromPipe(outPipe)
+	        result[1] = self.readFullyFromPipe(errPipe)
 
 	        // restore standard out/error
 	        dup2(stdout, STDOUT_FILENO)
@@ -379,15 +364,8 @@ open class YoutubeDL: NSObject {
 	}
 
 	func readFullyFromPipe(_ pipe: Pipe) -> String {
-	    var result = Data()
-	    while true {
-	        let data = pipe.fileHandleForReading.availableData
-	        if data.isEmpty {
-	            break
-	        }
-	        result.append(data)
-	    }
-	    return String(data: result, encoding: .utf8) ?? ""
+	    let data = pipe.fileHandleForReading.readDataToEndOfFile()
+	    return String(data: data, encoding: .utf8) ?? ""
 	}
 
     func handleFFmpeg(args: [String]) -> Int {
