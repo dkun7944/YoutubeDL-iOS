@@ -359,6 +359,7 @@ open class YoutubeDL: NSObject {
                     	return nil
                  	}
 
+					print("read popen")
                   	print(#function, string)
                   	return string
              	} catch {
@@ -367,8 +368,12 @@ open class YoutubeDL: NSObject {
               	}
             }
 
+			print("1")
             result[0] = read(pipe: outPipe)
+            print("2")
             result[1] = read(pipe: errPipe)
+            print("3")
+
             return Python.tuple(result)
         }
         return Python.tuple(result)
