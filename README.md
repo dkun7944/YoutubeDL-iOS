@@ -9,7 +9,7 @@ This package is NOT AppStore-safe.  Historically AppStore has been removing apps
 ## Installation
 
 ```
-.package(url: "https://github.com/kewlbear/YoutubeDL-iOS.git", from: "0.0.2")
+.package(url: "https://github.com/dkun7944/YoutubeDL-iOS.git", from: "0.0.2")
 ```
 
 ## Usage
