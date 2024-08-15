@@ -353,14 +353,14 @@ open class YoutubeDL: NSObject {
 
             func read(pipe: Pipe) -> String? {
                 guard let string = String(data: pipe.fileHandleForReading.availableData, encoding: .utf8) else {
-                    print(#function, "not UTF-8?")
+//                    print(#function, "not UTF-8?")
                     return nil
                 }
-                print(#function, string)
+//                print(#function, string)
                 return string
             }
 
-            result[0] = "" // read(pipe: outPipe)
+            result[0] = read(pipe: outPipe)
             result[1] = read(pipe: errPipe)
             return Python.tuple(result)
         }
