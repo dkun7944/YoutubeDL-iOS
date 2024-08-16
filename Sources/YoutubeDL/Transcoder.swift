@@ -25,7 +25,7 @@
 //import Foundation
 //import FFmpegSupport
 //
-public typealias TimeRange = Range<TimeInterval>
+//public typealias TimeRange = Range<TimeInterval>
 //
 //public enum FFmpegError: Error {
 //    case exit(code: Int)

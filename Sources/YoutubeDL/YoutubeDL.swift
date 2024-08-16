@@ -971,3 +971,5 @@ extension FileHandle {
         return result
     }
 }
+
+public typealias TimeRange = Range<TimeInterval>
