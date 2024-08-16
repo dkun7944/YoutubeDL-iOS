@@ -359,7 +359,7 @@ open class YoutubeDL: NSObject {
             }
 
             result[0] = "" // read(pipe: outPipe)
-            result[1] = read(pipe: errPipe)
+            result[1] = "" // read(pipe: errPipe)
             return Python.tuple(result)
         }
         return Python.tuple(result)
