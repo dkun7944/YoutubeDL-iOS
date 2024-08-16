@@ -26,7 +26,7 @@ import PythonSupport
 import AVFoundation
 import Photos
 import UIKit
-import FFmpegSupport
+// import FFmpegSupport
 
 // https://github.com/pvieito/PythonKit/pull/30#issuecomment-751132191
 let RTLD_DEFAULT = UnsafeMutableRawPointer(bitPattern: -2)
@@ -435,7 +435,7 @@ open class YoutubeDL: NSObject {
         }
 
 //        print(#function, args)
-        return args[0] == "ffmpeg" ? ffmpeg(args) : ffprobe(args)
+        return 1 // args[0] == "ffmpeg" ? ffmpeg(args) : ffprobe(args)
     }
 
     var willTranscode: (() -> ((Double) -> Void)?)?
