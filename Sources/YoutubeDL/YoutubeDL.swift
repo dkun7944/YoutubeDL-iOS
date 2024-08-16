@@ -350,16 +350,17 @@ open class YoutubeDL: NSObject {
             popen.returncode = PythonObject(exitCode)
 
             func read(pipe: Pipe) -> String? {
-                guard let string = String(data: pipe.fileHandleForReading.availableData, encoding: .utf8) else {
-                    print(#function, "not UTF-8?")
+                guard let data = pipe.fileHandleForReading.availableDataWithTimeout(0.01),
+                      let string = String(data: data, encoding: .utf8) else {
+//                    print(#function, "not UTF-8?")
                     return nil
                 }
-                print(#function, string)
+//                print(#function, string)
                 return string
             }
 
-            result[0] = "" // read(pipe: outPipe)
-            result[1] = "" // read(pipe: errPipe)
+            result[0] = read(pipe: outPipe)
+            result[1] = read(pipe: errPipe)
             return Python.tuple(result)
         }
         return Python.tuple(result)
@@ -951,7 +952,7 @@ extension FileHandle {
         let semaphore = DispatchSemaphore(value: 0)
         var result: Data?
 
-        DispatchQueue.global(qos: .default).async {
+        DispatchQueue.global(qos: .userInteractive).async {
             do {
                 result = try self.availableData
             } catch {
