@@ -350,12 +350,11 @@ open class YoutubeDL: NSObject {
             popen.returncode = PythonObject(exitCode)
 
             func read(pipe: Pipe) -> String? {
-                guard let data = pipe.fileHandleForReading.availableData,
-                      let string = String(data: data, encoding: .utf8) else {
-//                    print(#function, "not UTF-8?")
+                guard let string = String(data: pipe.fileHandleForReading.availableData, encoding: .utf8) else {
+                    print(#function, "not UTF-8?")
                     return nil
                 }
-//                print(#function, string)
+                print(#function, string)
                 return string
             }
 
